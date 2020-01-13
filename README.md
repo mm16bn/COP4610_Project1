@@ -2,10 +2,10 @@
 
 ## OPSYS Project 1: Implementing a Shell 
 
-**Problem Statement**
+### **Problem Statement**
 Design and implement a basic shell interface that supports input/output redirection, pipes, background processing, and a series of built in functions as specified below. The shell should be robust (e.g. it should not crash under any circumstances beyond machine failure). Unless otherwise specified, the required features should adhere to the operational semantics of the bash shell.
 
-**Allowed Assumptions**
+### **Allowed Assumptions**
 ● Error messages do not need to match the exact wording of the bash shell, but should indicate the general cause of the error
 ● No more than two pipes (|) will appear in a single line
 ● You do not need to handle globs, regular expressions, special characters (other than the ones
