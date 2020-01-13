@@ -1,6 +1,6 @@
 # COP4610
 
-OPSYS Project 1: Implementing a Shell 
+## OPSYS Project 1: Implementing a Shell 
 
 **Problem Statement**
 Design and implement a basic shell interface that supports input/output redirection, pipes, background processing, and a series of built in functions as specified below. The shell should be robust (e.g. it should not crash under any circumstances beyond machine failure). Unless otherwise specified, the required features should adhere to the operational semantics of the bash shell.
