@@ -146,7 +146,7 @@ void expandEnv(instruction* instr_ptr)
         {
             char* env = (char*) malloc(1000);
             instr_ptr->tokens[i]++;
-            memcpy(env, getenv(instr_ptr->tokens[i]), sizeof(getenv(instr_ptr->tokens[i])));
+            memcpy(env, getenv(instr_ptr->tokens[i]), 100);
             instr_ptr->tokens[i] = env;
         }
     }
