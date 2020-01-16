@@ -20,22 +20,23 @@ void addToken(instruction* instr_ptr, char* tok);
 void printTokens(instruction* instr_ptr);
 void clearInstruction(instruction* instr_ptr);
 void addNull(instruction* instr_ptr);
+void expandEnv(instruction* instr_ptr);
+void printPrompt();
 
 int main() {
 	char* token = NULL;
 	char* temp = NULL;
-
+// yeet
 	instruction instr;
 	instr.tokens = NULL;
 	instr.numTokens = 0;
 
 
 	while (1) {
-		printf("Please enter an instruction: ");
-
 		// loop reads character sequences separated by whitespace
 		do {
 			//scans for next token and allocates token var to size of scanned token
+            printPrompt();
 			scanf("%ms", &token);
 			temp = (char*)malloc((strlen(token) + 1) * sizeof(char));
 
@@ -75,7 +76,9 @@ int main() {
 		} while ('\n' != getchar());    //until end of line is reached
 
 		addNull(&instr);
-		printTokens(&instr);
+		printPrompt();
+		expandEnv(&instr);
+        printTokens(&instr);
 		clearInstruction(&instr);
 	}
 
@@ -131,4 +134,34 @@ void clearInstruction(instruction* instr_ptr)
 
 	instr_ptr->tokens = NULL;
 	instr_ptr->numTokens = 0;
+}
+
+void expandEnv(instruction* instr_ptr)
+{
+    int numTok = instr_ptr->numTokens-1;
+    int i;
+    for (i = 0; i < numTok; i++)
+    {
+        if (instr_ptr->tokens[i][0] == '$')
+        {
+            char* env = (char*) malloc(1000);
+            instr_ptr->tokens[i]++;
+            memcpy(env, getenv(instr_ptr->tokens[i]), sizeof(getenv(instr_ptr->tokens[i])));
+            instr_ptr->tokens[i] = env;
+        }
+    }
+}
+
+void printPrompt()
+{
+    char user[30];
+    char machine[80];
+    char pwd[100];
+
+    strcpy(user, getenv("USER"));
+    strcpy(machine, getenv("MACHINE"));
+    strcpy(pwd, getenv("PWD"));
+
+    printf("%s@%s:%s> ", user, machine, pwd);
+
 }
