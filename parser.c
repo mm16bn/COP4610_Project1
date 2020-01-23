@@ -81,9 +81,9 @@ int main() {
 		addNull(&instr);
 		printPrompt();
 		expandEnv(&instr);
-	//	ioRedirection(&instr);        
+		ioRedirection(&instr);        
 		printTokens(&instr);	
-	//	piping(&instr);
+		piping(&instr);
 		clearInstruction(&instr);
 	}
 
