@@ -5,11 +5,11 @@
 //*** if any problems are found with this code,
 //*** please report them to the TA
 
-
+#include <unistd.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-
+#include <stdbool.h>
 typedef struct
 {
 	char** tokens;
@@ -22,7 +22,8 @@ void clearInstruction(instruction* instr_ptr);
 void addNull(instruction* instr_ptr);
 void expandEnv(instruction* instr_ptr);
 void printPrompt();
-
+void piping(instruction* instr_ptr);
+void ioRedirection(instruction* instr_ptr);
 int main() {
 	char* token = NULL;
 	char* temp = NULL;
@@ -31,12 +32,12 @@ int main() {
 	instr.tokens = NULL;
 	instr.numTokens = 0;
 
-
 	while (1) {
+		
 		// loop reads character sequences separated by whitespace
 		do {
 			//scans for next token and allocates token var to size of scanned token
-            printPrompt();
+            		printPrompt();
 			scanf("%ms", &token);
 			temp = (char*)malloc((strlen(token) + 1) * sizeof(char));
 
@@ -49,6 +50,7 @@ int main() {
 						memcpy(temp, token + start, i - start);
 						temp[i-start] = '\0';
 						addToken(&instr, temp);
+
 					}
 
 					char specialChar[2];
@@ -58,6 +60,7 @@ int main() {
 					addToken(&instr,specialChar);
 
 					start = i + 1;
+
 				}
 			}
 
@@ -78,7 +81,9 @@ int main() {
 		addNull(&instr);
 		printPrompt();
 		expandEnv(&instr);
-        printTokens(&instr);
+	//	ioRedirection(&instr);        
+		printTokens(&instr);	
+	//	piping(&instr);
 		clearInstruction(&instr);
 	}
 
@@ -150,6 +155,93 @@ void expandEnv(instruction* instr_ptr)
             instr_ptr->tokens[i] = env;
         }
     }
+}
+
+// Check for redirection
+void ioRedirection(instruction* instr_ptr)
+{
+	int numTok = instr_ptr->numTokens -1;
+	int i;
+
+	for( i = 0; i < numTok; i++)
+	{
+		if ( instr_ptr->tokens[i][0] == '>' || instr_ptr->tokens[i][0] == '<' )
+		{
+			// Check if first or last character
+			if( i == 0 || i == numTok-1 )
+			{
+				printf("Missing name for redirect.\n");
+			}
+			
+			else
+			{
+
+			}
+		}
+	}
+}
+
+void piping(instruction* instr_ptr)
+{
+	int numTok = instr_ptr->numTokens - 1;
+	int i;
+
+	for( i=0; i < numTok; i++)
+	{	
+		if ( instr_ptr->tokens[i][0] == '|' )
+		{
+			if ( i == 0 || i == numTok-1 )
+			{
+				printf("Invalid null command.\n");
+				return;
+			}
+
+			else
+			{
+				printf("Pipe bitch!\n");
+						
+				int fd[2];
+			
+				if (fork() == 0) {
+					// Child (cmd1|cmd2)
+					pipe(fd);
+					if ( fork() == 0 ) {
+					 // Cmd1 (Writer)
+						close(1);
+						dup(fd[1]);
+						close(fd[0]);
+						close(fd[1]);	 
+					 //TODO:  Execute command
+					 exit(0);
+					 	
+					 }
+
+					else {
+					
+						//Cmd 2 (Reader)
+						//Handle fds
+						close(0);
+						dup(fd[0]);
+						close(fd[0]);
+						close(fd[1]);
+						//TODO: Execute command
+						exit(0);
+					
+					
+					}
+				}
+				
+				else{
+					//Parent (Shell)
+					close(fd[0]);
+					close(fd[1]);
+				}
+				return;
+			}
+
+		}		
+	}
+
 }
 
 void printPrompt()
