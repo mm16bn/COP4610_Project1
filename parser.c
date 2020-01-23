@@ -10,6 +10,9 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
+
+int numCommands = 0;
+
 typedef struct
 {
 	char** tokens;
@@ -80,6 +83,7 @@ int main() {
 			temp = NULL;
 		} while ('\n' != getchar());    //until end of line is reached
 
+		numCommands++;
 		addNull(&instr);
 		printPrompt();
 		expandEnv(&instr);
@@ -191,14 +195,14 @@ void builtIns(instruction* instr_ptr)
 	
 	if( strcmp((instr_ptr->tokens)[0],"echo") == 0 )
 	{
+
 			char envVar[300];
-			int j;
-			for( i=1; j < numTok; i++ )
+			for( i=1; i < numTok; i++ )
 			{
 				// Environment vars
 				if( instr_ptr->tokens[i][0] == '$' )
 				{
-					strcpy(envVar, getenv((instr_ptr->tokens)[j]));
+					strcpy(envVar, getenv((instr_ptr->tokens)[i]));
 					
 					if( envVar != NULL )
 						printf("%s\n", envVar);
@@ -221,7 +225,8 @@ void builtIns(instruction* instr_ptr)
 
 	else if ( strcmp((instr_ptr->tokens)[0], "exit" ) == 0 )
 	{
-		printf("%s \n", (instr_ptr->tokens)[0]);
+		printf("%s \n\t%s %d\n", "Exiting now!", "Commands executed:", numCommands);
+		exit(0);
 	}
 
 	else if ( strcmp((instr_ptr->tokens)[0], "jobs") == 0 )
