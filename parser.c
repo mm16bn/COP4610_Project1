@@ -198,7 +198,7 @@ void piping(instruction* instr_ptr)
 
 			else
 			{
-				printf("Pipe bitch!\n");
+				//printf("Pipe!\n");
 						
 				int fd[2];
 			
