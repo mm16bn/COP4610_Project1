@@ -24,6 +24,8 @@ void expandEnv(instruction* instr_ptr);
 void printPrompt();
 void piping(instruction* instr_ptr);
 void ioRedirection(instruction* instr_ptr);
+void builtIns(instruction* instr_ptr);
+
 int main() {
 	char* token = NULL;
 	char* temp = NULL;
@@ -84,6 +86,7 @@ int main() {
 		ioRedirection(&instr);        
 		printTokens(&instr);	
 		piping(&instr);
+		builtIns(&instr);
 		clearInstruction(&instr);
 	}
 
@@ -181,6 +184,59 @@ void ioRedirection(instruction* instr_ptr)
 	}
 }
 
+void builtIns(instruction* instr_ptr)
+{
+	int numTok = instr_ptr->numTokens -1;
+	int i;
+	
+	if( strcmp((instr_ptr->tokens)[0],"echo") == 0 )
+	{
+			char envVar[300];
+			int j;
+			for( i=1; j < numTok; i++ )
+			{
+				// Environment vars
+				if( instr_ptr->tokens[i][0] == '$' )
+				{
+					strcpy(envVar, getenv((instr_ptr->tokens)[j]));
+					
+					if( envVar != NULL )
+						printf("%s\n", envVar);
+					
+					else
+					{
+						printf("%s\n", "Invalid or NULL environment variable"); 	
+						return;
+					}
+				}
+			
+				// Output without modification
+				else
+				{
+					printf("%s ", (instr_ptr->tokens)[i]);
+				}
+			} 
+			printf("%s", "\n");
+	}
+
+	else if ( strcmp((instr_ptr->tokens)[0], "exit" ) == 0 )
+	{
+		printf("%s \n", (instr_ptr->tokens)[0]);
+	}
+
+	else if ( strcmp((instr_ptr->tokens)[0], "jobs") == 0 )
+	{	
+		printf("%s \n", (instr_ptr->tokens)[0]);
+	}
+
+	else if ( strcmp((instr_ptr->tokens)[0], "cd") == 0 )
+	{
+		printf("%s \n", (instr_ptr->tokens)[0]);
+
+	}
+
+}
+
 void piping(instruction* instr_ptr)
 {
 	int numTok = instr_ptr->numTokens - 1;
@@ -198,7 +254,7 @@ void piping(instruction* instr_ptr)
 
 			else
 			{
-				//printf("Pipe!\n");
+				printf("Pipe!\n");
 						
 				int fd[2];
 			
