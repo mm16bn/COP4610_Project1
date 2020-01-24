@@ -42,11 +42,11 @@ int main() {
 	instr.numTokens = 0;
 
 	while (1) {
-		
-		// loop reads character sequences separated by whitespace
+        printPrompt();
+
+        // loop reads character sequences separated by whitespace
 		do {
 			//scans for next token and allocates token var to size of scanned token
-			printPrompt();
 			scanf("%ms", &token);
 			temp = (char*)malloc((strlen(token) + 1) * sizeof(char));
 
@@ -89,7 +89,7 @@ int main() {
 
 		numCommands++;
 		addNull(&instr);
-		printPrompt();
+		//printPrompt();
 		expandEnv(&instr);
 		ioRedirection(&instr);        
 		printTokens(&instr);	
