@@ -10,6 +10,10 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <dirent.h>
+#include <errno.h>
+#include <sys/stat.h>
+
 
 int numCommands = 0;
 
@@ -24,6 +28,7 @@ void printTokens(instruction* instr_ptr);
 void clearInstruction(instruction* instr_ptr);
 void addNull(instruction* instr_ptr);
 void expandEnv(instruction* instr_ptr);
+void pathResolution(instruction* instr_ptr);
 void printPrompt();
 void piping(instruction* instr_ptr);
 void ioRedirection(instruction* instr_ptr);
@@ -34,17 +39,18 @@ int fileExists(const char *path);
 int main() {
 	char* token = NULL;
 	char* temp = NULL;
-// yeet
 	instruction instr;
 	instr.tokens = NULL;
 	instr.numTokens = 0;
 
 	while (1) {
-
+        printPrompt();
 		// loop reads character sequences separated by whitespace
+        //scans for next token and allocates token var to size of scanned token
+
+        // loop reads character sequences separated by whitespace
 		do {
 			//scans for next token and allocates token var to size of scanned token
-			printPrompt();
 			scanf("%ms", &token);
 			temp = (char *) malloc((strlen(token) + 1) * sizeof(char));
 
@@ -87,7 +93,7 @@ int main() {
 
 		numCommands++;
 		addNull(&instr);
-		printPrompt();
+		//printPrompt();
 		expandEnv(&instr);
 		shortcutRes(&instr);
 
@@ -318,7 +324,42 @@ void builtIns(instruction* instr_ptr)
 
 	else if ( strcmp((instr_ptr->tokens)[0], "cd") == 0 )
 	{
-		printf("%s \n", (instr_ptr->tokens)[0]);
+	    //convert path to absolute
+	    //call chdir on the path and update pwd
+	    //copy path to pwd using setenv
+	    //also check that entered directory is valid
+        struct stat buf;
+
+	    if (instr_ptr->tokens[1][0] != '/') { //path is relative
+	        //printf("first char is %s", instr_ptr->tokens[1][0]);
+            char *temp = (char*)malloc(strlen(getenv("PWD")));
+            memcpy(temp, getenv("PWD"), strlen(getenv("PWD")));
+            strcat(temp, "/");
+            strcat(temp, instr_ptr->tokens[1]);
+            //printf("%s", temp);
+            if (stat(temp, &buf) == 0 && S_ISDIR(buf.st_mode)) {
+                printf("relative directory is %s \n", temp);
+                chdir(temp);
+                setenv("PWD", temp, 1);
+            } else {
+                printf("Directory doesn't exist\n");
+                return;
+            }
+
+        } else {
+            if (stat(instr_ptr->tokens[1], &buf) == 0 && S_ISDIR(buf.st_mode)) {
+                printf("directory is %s\n", instr_ptr->tokens[1]);
+                chdir(instr_ptr->tokens[1]);
+                setenv("PWD", instr_ptr->tokens[1], 1);
+            }
+            else {
+                printf("Directory doesn't exist \n");
+                return;
+            }
+	    }
+
+
+		//printf("%s \n", (instr_ptr->tokens)[0]);
 
 	}
 
