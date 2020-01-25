@@ -1,0 +1,20 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/Users/fulluser/CLionProjects/COP4610/parser.c
+unistd.h
+-
+stdio.h
+-
+string.h
+-
+stdlib.h
+-
+stdbool.h
+-
+
