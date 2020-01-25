@@ -1,3 +1,0 @@
-/Users/fulluser/CLionProjects/COP4610/cmake-build-debug/CMakeFiles/rebuild_cache.dir
-/Users/fulluser/CLionProjects/COP4610/cmake-build-debug/CMakeFiles/edit_cache.dir
-/Users/fulluser/CLionProjects/COP4610/cmake-build-debug/CMakeFiles/COP4610.dir
