@@ -28,6 +28,8 @@ void printPrompt();
 void piping(instruction* instr_ptr);
 void ioRedirection(instruction* instr_ptr);
 void builtIns(instruction* instr_ptr);
+void shortcutRes(instruction* instr_ptr);
+int fileExists(const char *path);
 
 int main() {
 	char* token = NULL;
@@ -38,22 +40,22 @@ int main() {
 	instr.numTokens = 0;
 
 	while (1) {
-		
+
 		// loop reads character sequences separated by whitespace
 		do {
 			//scans for next token and allocates token var to size of scanned token
-            		printPrompt();
+			printPrompt();
 			scanf("%ms", &token);
-			temp = (char*)malloc((strlen(token) + 1) * sizeof(char));
+			temp = (char *) malloc((strlen(token) + 1) * sizeof(char));
 
 			int i;
 			int start = 0;
 			for (i = 0; i < strlen(token); i++) {
 				//pull out special characters and make them into a separate token in the instruction
 				if (token[i] == '|' || token[i] == '>' || token[i] == '<' || token[i] == '&') {
-					if (i-start > 0) {
+					if (i - start > 0) {
 						memcpy(temp, token + start, i - start);
-						temp[i-start] = '\0';
+						temp[i - start] = '\0';
 						addToken(&instr, temp);
 
 					}
@@ -62,7 +64,7 @@ int main() {
 					specialChar[0] = token[i];
 					specialChar[1] = '\0';
 
-					addToken(&instr,specialChar);
+					addToken(&instr, specialChar);
 
 					start = i + 1;
 
@@ -71,7 +73,7 @@ int main() {
 
 			if (start < strlen(token)) {
 				memcpy(temp, token + start, strlen(token) - start);
-				temp[i-start] = '\0';
+				temp[i - start] = '\0';
 				addToken(&instr, temp);
 			}
 
@@ -87,8 +89,10 @@ int main() {
 		addNull(&instr);
 		printPrompt();
 		expandEnv(&instr);
-		ioRedirection(&instr);        
-		printTokens(&instr);	
+		shortcutRes(&instr);
+
+		ioRedirection(&instr);
+		printTokens(&instr);
 		piping(&instr);
 		builtIns(&instr);
 		clearInstruction(&instr);
@@ -146,6 +150,84 @@ void clearInstruction(instruction* instr_ptr)
 
 	instr_ptr->tokens = NULL;
 	instr_ptr->numTokens = 0;
+}
+
+// If file or directory exists, return 1; otherwise 0.
+int fileExists(const char *path)
+{
+    if(access(path, F_OK) == -1)
+        return 0;
+
+    return 1;
+}
+
+void shortcutRes(instruction* instr_ptr)
+{
+	// Expands to $HOME
+    char* envvar = (char*) malloc(1000);
+	char* path_name = (char*) malloc(1000);
+
+	// Copies tokens into path_name
+	strcpy(path_name, (instr_ptr->tokens)[0]);
+    printf("\nPATH NAME: '%s'\n", path_name);
+
+    // Parse path_name into path without "/"
+	char *path = strtok(path_name, " /");
+
+    int numTok = instr_ptr->numTokens-1;
+    for (int i = 0; i < numTok; i++)
+    {
+        // Expands ~ to $HOME
+        if ( instr_ptr->tokens[i][0] == '~')
+        {
+            strcpy(envvar, getenv("HOME"));
+            printf("%s\n", envvar);
+            printf("HOME : %s\n", envvar);
+
+            // concatenates path after first ~/
+            while (path != NULL)
+            {
+                if (strcmp(path, "~") != 0)
+                {
+                    strcat(envvar, "/");
+                    strcat(envvar, path);
+                }
+                path = strtok(NULL, " /");
+            }
+
+            // checks if file or directory exists
+            if (fileExists(envvar) == 1)
+            {
+                printf("-bash: %s : is a directory\n", envvar);
+            }
+            else
+            {
+                printf("-bash: %s : No such file or directory\n", envvar);
+            }
+        }
+
+            // Expands to parent of PWD
+            // ERROR: if PWD = root (begins with /)
+        else if( strcmp((instr_ptr->tokens)[0],"..") == 0 )
+        {
+//        if ()
+        }
+
+            // Expands to PWD
+        else if( strcmp((instr_ptr->tokens)[0],".") == 0 )
+        {
+//        expandEnv(&$PWD);
+        }
+
+            // Expands to root directory
+        else if( strcmp((instr_ptr->tokens)[0],"/") == 0 )
+        {
+
+        }
+    }
+
+
+//	fprintf()
 }
 
 void expandEnv(instruction* instr_ptr)
@@ -287,8 +369,6 @@ void piping(instruction* instr_ptr)
 						close(fd[1]);
 						//TODO: Execute command
 						exit(0);
-					
-					
 					}
 				}
 				
