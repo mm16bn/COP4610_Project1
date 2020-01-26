@@ -491,3 +491,69 @@ void printPrompt()
     printf("%s@%s:%s> ", user, machine, pwd);
 
 }
+
+void pathResolution(instruction* instr_ptr)
+{
+	int i;
+	int statReturn;
+	int numTok = (instr_ptr->numTokens) -  1;
+	char *ptr, *pRes, *path, *isAbsolute, *temp = (char*) malloc(strlen(getenv("PATH")));
+	struct stat stats;
+
+	path = (char*) malloc(strlen(getenv("PATH")));
+	memcpy(path, getenv("PATH"), strlen(getenv("PATH")));
+	
+	isAbsolute = strchr((instr_ptr->tokens)[0], '/');
+	
+	if ( isAbsolute == NULL )
+	{
+		// Prefix with location in the path and search for file existence
+		// The first file in the concatenated path list to exist is the path of the command
+		// If none of the files exist, signal an error
+		pRes = strtok(path,":");
+//		printf("%s\n", pRes);
+		
+		while( pRes != NULL )
+		{
+			strcat(temp, pRes);
+			strcat(temp, "/");
+			
+			char* temp2 = (char*) malloc(strlen(getenv("PATH")));
+			strcat(temp2, temp);
+			
+			//printf("Before strcat token to temp2\n");
+			strcat(temp2, instr_ptr->tokens[0]);
+			//printf("After strcat token to temp2\n");
+
+			//printf("After strcat\n");
+			statReturn = stat(temp2, &stats);	
+
+			if ( statReturn  == 0 )
+			{
+				strcat(temp, instr_ptr->tokens[0]);
+				
+				//printf("In break\n");
+				break;
+			}		
+			
+			pRes = strtok(NULL, ":");
+			//printf("After strtok %s\n", pRes);
+		}
+
+	
+	}
+		
+	else
+	{
+		// Handle as Shortcut Resolution
+	
+	}
+
+	// Invalid command or file
+	if ( statReturn == -1 )
+	{
+		printf("%s\n", "Failure command not found");
+		return;
+	}	
+	
+}
