@@ -169,11 +169,11 @@ int fileExists(const char *path)
 
 void shortcutRes(instruction* instr_ptr)
 {
-	// Expands to $HOME
     char* envvar = (char*) malloc(1000);
 	char* path_name = (char*) malloc(1000);
+    char* env_path = (char*) malloc(1000);
 
-	// Copies tokens into path_name
+	// Copies input into path_name
 	strcpy(path_name, (instr_ptr->tokens)[0]);
     printf("\nPATH NAME: '%s'\n", path_name);
 
@@ -187,8 +187,6 @@ void shortcutRes(instruction* instr_ptr)
         if ( instr_ptr->tokens[i][0] == '~')
         {
             strcpy(envvar, getenv("HOME"));
-            printf("%s\n", envvar);
-            printf("HOME : %s\n", envvar);
 
             // concatenates path after first ~/
             while (path != NULL)
@@ -205,6 +203,7 @@ void shortcutRes(instruction* instr_ptr)
             if (fileExists(envvar) == 1)
             {
                 printf("-bash: %s : is a directory\n", envvar);
+                chdir(envvar);
             }
             else
             {
@@ -212,17 +211,70 @@ void shortcutRes(instruction* instr_ptr)
             }
         }
 
-            // Expands to parent of PWD
-            // ERROR: if PWD = root (begins with /)
-        else if( strcmp((instr_ptr->tokens)[0],"..") == 0 )
+            // Expands to PWD
+        else if(strcmp(path, ".") == 0)
         {
-//        if ()
+            strcpy(envvar, getenv("PWD"));
+
+            while (path != NULL)
+            {
+                if (strcmp(path, ".") != 0)
+                {
+                    strcat(envvar, "/");
+                    strcat(envvar, path);
+                }
+                path = strtok(NULL, " /");
+            }
+
+            // checks if file or directory (at envvar) exists
+            if (fileExists(envvar) == 1)
+            {
+//                perror(envvar);
+                printf("-bash: %s : is a directory\n", envvar);
+            }
+            else
+            {
+                perror(envvar);
+//                printf("-bash: %s : No such file or directory\n", envvar);
+            }
+
+            chdir(path);
         }
 
-            // Expands to PWD
-        else if( strcmp((instr_ptr->tokens)[0],".") == 0 )
+            // Expands to parent of PWD
+            // ERROR: if PWD = root (begins with /)
+        else if (strcmp(path, "..") == 0)
         {
-//        expandEnv(&$PWD);
+            char *parent = (char*)malloc(1000);
+
+            chdir("..");
+            char *cwd = getcwd(parent, 100);
+
+            // concatenates parents with input
+            while (path != NULL)
+            {
+                if (strcmp(path, "..") != 0)
+                {
+                    strcat(cwd, "/");
+                    strcat(cwd, path);
+                }
+                path = strtok(NULL, " /");
+            }
+
+            // If file/dir doesn't exist, throw error
+            if(chdir(cwd) != 0)
+            {
+                perror(cwd);
+            }
+            else if(strcmp(cwd, "/") == 0)
+            {
+                printf("ERROR : parent directory.\n");
+            }
+            else
+            {
+                printf("-bash: %s\n", cwd);
+            }
+
         }
 
             // Expands to root directory
