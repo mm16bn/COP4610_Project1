@@ -16,19 +16,25 @@
 
 
 int numCommands = 0;
-
 typedef struct
 {
 	char** tokens;
 	int numTokens;
 } instruction;
 
+typedef struct
+{
+    char* cmd;
+    int pid;
+} process;
+
 void addToken(instruction* instr_ptr, char* tok);
 void printTokens(instruction* instr_ptr);
 void clearInstruction(instruction* instr_ptr);
 void addNull(instruction* instr_ptr);
 void expandEnv(instruction* instr_ptr);
-void pathResolution(instruction* instr_ptr);
+char* pathResolution(instruction* instr_ptr);
+void execute(char* path, instruction* instr_ptr);
 void printPrompt();
 void piping(instruction* instr_ptr);
 void ioRedirection(instruction* instr_ptr);
@@ -91,16 +97,17 @@ int main() {
 			temp = NULL;
 		} while ('\n' != getchar());    //until end of line is reached
 
+		char* execPath = (char*) malloc(1000);
+
 		numCommands++;
 		addNull(&instr);
-		//printPrompt();
 		expandEnv(&instr);
 		shortcutRes(&instr);
-
 		ioRedirection(&instr);
+		execPath = pathResolution(&instr);
+        piping(&instr);
+        builtIns(&instr);
 		printTokens(&instr);
-		piping(&instr);
-		builtIns(&instr);
 		clearInstruction(&instr);
 	}
 
@@ -181,7 +188,8 @@ void shortcutRes(instruction* instr_ptr)
 	char *path = strtok(path_name, " /");
 
     int numTok = instr_ptr->numTokens-1;
-    for (int i = 0; i < numTok; i++)
+    int i;
+    for (i = 0; i < numTok; i++)
     {
         // Expands ~ to $HOME
         if ( instr_ptr->tokens[i][0] == '~')
@@ -492,7 +500,7 @@ void printPrompt()
 
 }
 
-void pathResolution(instruction* instr_ptr)
+char* pathResolution(instruction* instr_ptr)
 {
 	int i;
 	int statReturn;
@@ -515,7 +523,7 @@ void pathResolution(instruction* instr_ptr)
 		
 		while( pRes != NULL )
 		{
-			strcat(temp, pRes);
+			strcpy(temp, pRes);
 			strcat(temp, "/");
 			
 			char* temp2 = (char*) malloc(strlen(getenv("PATH")));
@@ -526,23 +534,22 @@ void pathResolution(instruction* instr_ptr)
 			//printf("After strcat token to temp2\n");
 
 			//printf("After strcat\n");
-			statReturn = stat(temp2, &stats);	
-
+			statReturn = stat(temp2, &stats);
+            //printf("temp2 = %s \n", temp2);
 			if ( statReturn  == 0 )
 			{
 				strcat(temp, instr_ptr->tokens[0]);
-				
-				//printf("In break\n");
+				return temp;
 				break;
 			}		
-			
+
 			pRes = strtok(NULL, ":");
+			//free(temp);
 			//printf("After strtok %s\n", pRes);
 		}
 
 	
 	}
-		
 	else
 	{
 		// Handle as Shortcut Resolution
