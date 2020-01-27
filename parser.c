@@ -105,6 +105,7 @@ int main() {
 		shortcutRes(&instr);
 		ioRedirection(&instr);
 		execPath = pathResolution(&instr);
+		execute(execPath, &instr);
         piping(&instr);
         builtIns(&instr);
 		printTokens(&instr);
@@ -588,4 +589,17 @@ char* pathResolution(instruction* instr_ptr)
 		return;
 	}	
 	
+}
+
+void execute(char* path, instruction* instr_ptr){
+    pid_t child_pid;
+    int stat_loc;
+    child_pid = fork();
+    if (child_pid == 0) {
+        /* Never returns if the call is successful */
+        execv(path, instr_ptr->tokens);
+        printf("This won't be printed if execvp is successul\n");
+    } else {
+        waitpid(child_pid, &stat_loc, WUNTRACED);
+    }
 }
