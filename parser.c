@@ -16,19 +16,25 @@
 
 
 int numCommands = 0;
-
 typedef struct
 {
 	char** tokens;
 	int numTokens;
 } instruction;
 
+typedef struct
+{
+    char* cmd;
+    int pid;
+} process;
+
 void addToken(instruction* instr_ptr, char* tok);
 void printTokens(instruction* instr_ptr);
 void clearInstruction(instruction* instr_ptr);
 void addNull(instruction* instr_ptr);
 void expandEnv(instruction* instr_ptr);
-void pathResolution(instruction* instr_ptr);
+char* pathResolution(instruction* instr_ptr);
+void execute(char* path, instruction* instr_ptr);
 void printPrompt();
 void piping(instruction* instr_ptr);
 void ioRedirection(instruction* instr_ptr);
@@ -91,16 +97,18 @@ int main() {
 			temp = NULL;
 		} while ('\n' != getchar());    //until end of line is reached
 
+		char* execPath = (char*) malloc(1000);
+
 		numCommands++;
 		addNull(&instr);
-		//printPrompt();
 		expandEnv(&instr);
 		shortcutRes(&instr);
-
 		ioRedirection(&instr);
+		execPath = pathResolution(&instr);
+		execute(execPath, &instr);
+        piping(&instr);
+        builtIns(&instr);
 		printTokens(&instr);
-		piping(&instr);
-		builtIns(&instr);
 		clearInstruction(&instr);
 	}
 
@@ -184,7 +192,6 @@ void shortcutRes(instruction* instr_ptr)
         // If relative path:
         path = strtok(path_name, " /");
 //        printf("PATH: %s\n", path);
-
             if (strcmp(path, "~") == 0)
             {
                 strcpy(envvar, getenv("HOME"));
@@ -610,7 +617,7 @@ void printPrompt()
 
 }
 
-void pathResolution(instruction* instr_ptr)
+char* pathResolution(instruction* instr_ptr)
 {
 	int i;
 	int statReturn;
@@ -633,7 +640,7 @@ void pathResolution(instruction* instr_ptr)
 		
 		while( pRes != NULL )
 		{
-			strcat(temp, pRes);
+			strcpy(temp, pRes);
 			strcat(temp, "/");
 			
 			char* temp2 = (char*) malloc(strlen(getenv("PATH")));
@@ -644,23 +651,22 @@ void pathResolution(instruction* instr_ptr)
 			//printf("After strcat token to temp2\n");
 
 			//printf("After strcat\n");
-			statReturn = stat(temp2, &stats);	
-
+			statReturn = stat(temp2, &stats);
+            //printf("temp2 = %s \n", temp2);
 			if ( statReturn  == 0 )
 			{
 				strcat(temp, instr_ptr->tokens[0]);
-				
-				//printf("In break\n");
+				return temp;
 				break;
 			}		
-			
+
 			pRes = strtok(NULL, ":");
+			//free(temp);
 			//printf("After strtok %s\n", pRes);
 		}
 
 	
 	}
-		
 	else
 	{
 		// Handle as Shortcut Resolution
@@ -674,4 +680,17 @@ void pathResolution(instruction* instr_ptr)
 		return;
 	}	
 	
+}
+
+void execute(char* path, instruction* instr_ptr){
+    pid_t child_pid;
+    int stat_loc;
+    child_pid = fork();
+    if (child_pid == 0) {
+        /* Never returns if the call is successful */
+        execv(path, instr_ptr->tokens);
+        printf("This won't be printed if execvp is successul\n");
+    } else {
+        waitpid(child_pid, &stat_loc, WUNTRACED);
+    }
 }
