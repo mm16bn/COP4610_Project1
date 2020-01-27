@@ -178,14 +178,22 @@ void shortcutRes(instruction* instr_ptr)
 {
     char* envvar = (char*) malloc(1000);
 	char* path_name = (char*) malloc(1000);
-    char* env_path = (char*) malloc(1000);
+    char* path = (char*) malloc(1000);
 
 	// Copies input into path_name
 	strcpy(path_name, (instr_ptr->tokens)[0]);
-    printf("\nPATH NAME: '%s'\n", path_name);
+//    printf("\nPATH NAME: '%s'\n", path_name);
 
-    // Parse path_name into path without "/"
-	char *path = strtok(path_name, " /");
+
+    if (instr_ptr->tokens[0][0] != '/') {
+        // If relative path:
+        path = strtok(path_name, " /");
+//        printf("PATH: %s\n", path);
+    }
+    else
+    {
+        path = path_name;
+    }
 
     int numTok = instr_ptr->numTokens-1;
     int i;
@@ -276,7 +284,7 @@ void shortcutRes(instruction* instr_ptr)
             }
             else if(strcmp(cwd, "/") == 0)
             {
-                printf("ERROR : parent directory.\n");
+                printf("ERROR : parent directory.");
             }
             else
             {
@@ -284,16 +292,33 @@ void shortcutRes(instruction* instr_ptr)
             }
 
         }
-
             // Expands to root directory
-        else if( strcmp((instr_ptr->tokens)[0],"/") == 0 )
-        {
+        else if (instr_ptr->tokens[i][0] == '/') {
+            char *root = (char*)malloc(1000);
+            chdir("/");
+            char *cwd = getcwd(root, 100);
+            path = strtok(path_name, " /");
+
+            while (path != NULL)
+            {
+                strcat(cwd, path);
+                strcat(cwd, "/");
+                path = strtok(NULL, " /");
+            }
+
+            // If file/dir doesn't exist, throw error
+            if(chdir(cwd) != 0)
+            {
+                perror(cwd);
+            }
+
+            else
+            {
+                printf("-bash: %s\n", cwd);
+            }
 
         }
     }
-
-
-//	fprintf()
 }
 
 void expandEnv(instruction* instr_ptr)
