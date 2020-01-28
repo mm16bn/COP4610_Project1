@@ -308,6 +308,7 @@ void ioRedirection(instruction* instr_ptr)
     int fd = 0;
     char* path = (char*)malloc(1000);
     char *path_name = (char*)malloc(1000);
+    char *path_res = (char*)malloc(1000);
     char *io = (char*)malloc(1000);
     char **new_arr = (char**)malloc(1000);
 
@@ -328,25 +329,50 @@ void ioRedirection(instruction* instr_ptr)
             }
 
             else {
-                if (strcmp(instr_ptr->tokens[i], "<") == 0) {
-                    fd = open(path, O_RDONLY);
-                    if(fork() == 0) {
-                        printf("Input redirection\n");
-                        path = pathResolution(instr_ptr);
-                        printf("PATH: %s\n", path);
+                if (strcmp(instr_ptr->tokens[i],"<") == 0) {
+                    int index = i;
 
+                    strcpy(path, instr_ptr->tokens[i + 1]);
+
+                    io = strtok(path_name, " <");
+
+                    for (int j = 0; j < index; j++) {
+                        strcpy(path_name, instr_ptr->tokens[j]);
+
+                        io = strtok(path_name, " <");
+
+                        while (io != NULL) {
+                            new_arr[j] = io;
+                            io = strtok(NULL, " <");
+                        }
+                    }
+
+                    fd = open(path, O_RDONLY);
+
+                    if (fd == -1) {
+                        perror(path);
+                        exit(EXIT_FAILURE);
+                    }
+
+                    pid_t child_pid;
+                    int stat_loc;
+                    child_pid = fork();
+
+                    if (child_pid == 0) {
+
+                        path = pathResolution(instr_ptr);
 
                         close(STDIN_FILENO);
                         dup(fd);
                         close(fd);
 
+                        path_res = pathResolution(instr_ptr);
 
-                        // Execute input redir
-                        execute(path, instr_ptr);
+                        execv(path_res, new_arr);
+
                     }
-
                     else {
-                        //Parent
+                        waitpid(child_pid, &stat_loc, WUNTRACED);
                         close(fd);
                     }
                 }
@@ -358,7 +384,6 @@ void ioRedirection(instruction* instr_ptr)
 
                     io = strtok(path_name, " >");
 
-
                     for (int j = 0; j < index; j++)
                     {
                         strcpy(path_name, instr_ptr->tokens[j]);
@@ -367,7 +392,6 @@ void ioRedirection(instruction* instr_ptr)
 
                         while(io != NULL)
                         {
-                            printf("IO: %s\n", io);
                             new_arr[j] = io;
                             io = strtok(NULL, " >");
                         }
@@ -375,7 +399,6 @@ void ioRedirection(instruction* instr_ptr)
 
                     fd = open(path, O_WRONLY | O_TRUNC | O_CREAT, S_IRUSR |
                     S_IRGRP | S_IWGRP | S_IWUSR);
-                    char *path_res = (char*)malloc(1000);
 
                     if(fd == -1)
                     {
@@ -388,11 +411,7 @@ void ioRedirection(instruction* instr_ptr)
                     child_pid = fork();
 
                     if (child_pid == 0) {
-                        printf("Output redirection\n");
-
                         path = pathResolution(instr_ptr);
-
-                        printf("THIS: %s\n", instr_ptr->tokens[0]);
 
                         close(STDOUT_FILENO);
                         dup(fd);
@@ -400,14 +419,7 @@ void ioRedirection(instruction* instr_ptr)
 
                         path_res = pathResolution(instr_ptr);
 
-//                        execute(cmd, instr_ptr);
-//                        char *a[2];
-//                        a[0] = instr_ptr->tokens[0];
-
-
                         execv(path_res, new_arr);
-
-                        printf("EXECUTING!\n");
 
                     }
 
