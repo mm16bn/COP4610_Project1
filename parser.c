@@ -13,6 +13,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 
 
 int numCommands = 0;
@@ -27,13 +28,6 @@ typedef struct
     char* cmd;
     int pid;
 } process;
-
-typedef struct
-{
-    process *array;
-    size_t used;
-    size_t size;
-} Array;
 
 void addToken(instruction* instr_ptr, char* tok);
 void printTokens(instruction* instr_ptr);
@@ -197,6 +191,8 @@ void shortcutRes(instruction* instr_ptr)
     char* envvar = (char*) malloc(1000);
 	char* path_name = (char*) malloc(1000);
     char* path = (char*) malloc(1000);
+    char *parent = (char*)malloc(1000);
+    char *cwd = (char*) malloc(1000);
 
 	// Copies input into path_name
 	strcpy(path_name, (instr_ptr->tokens)[0]);
@@ -337,6 +333,8 @@ void shortcutRes(instruction* instr_ptr)
 
         }
     }
+
+    return cwd;
 }
 
 void expandEnv(instruction* instr_ptr)
@@ -616,90 +614,12 @@ char* pathResolution(instruction* instr_ptr)
 void execute(char* path, instruction* instr_ptr){
     pid_t child_pid;
     int stat_loc;
-    int i;
-    if(instr_ptr->numTokens > 2){
-        //printf("Numtokens = %d", instr_ptr->numTokens);
-        for(i = 1; i < instr_ptr->numTokens; i++){
-
-            if(strcmp(instr_ptr->tokens[i], "&") == 0){
-                //printf("going to bg");
-                executeBg(instr_ptr, i, path);
-                return;
-            }
-        }
-    } else {
-        //printf("No background");
-        child_pid = fork();
-        if (child_pid == 0) {
-            /* Never returns if the call is successful */
-            execv(path, instr_ptr->tokens);
-            printf("This won't be printed if execv is successul\n");
-        } else {
-            waitpid(child_pid, &stat_loc, WUNTRACED);
-        }
-    }
-    }
-
-
-
-int insert(process process1)
-{
-    int i;
-    for(i = 0; i < 100; i++){
-        if (processes[i].cmd == "*"){
-            processes[i] = process1;
-            return i;
-        }
-    }
-    printf("No room in queue");
-}
-
-void checkProcesses()
-{
-    int i;
-    int stat_loc;
-    for(i = 0; i < 100; i++){
-        if (processes[i].pid == waitpid(-1, &stat_loc, WUNTRACED)){
-            printf("[%d]+ [%s]\n", i, processes[i].cmd);
-            int c;
-            for (c = i - 1; c < 100 - 1; c++)
-            processes[c] = processes[c+1];
-        }
-    }
-}
-
-void initializeProcess(){
-    int i;
-    for (i = 0; i < 100; i++){
-        processes[i].cmd = "*";
-    }
-}
-
-void executeBg(instruction* instr_ptr, int i, char* path){
-    pid_t child_pid;
-    int stat_loc;
     child_pid = fork();
-    //printf("%d", child_pid);
     if (child_pid == 0) {
         /* Never returns if the call is successful */
-        int j;
-        char** args = malloc(i+1 * sizeof(char*));
-        for (j = 0; j < i; j++){
-            args[j] = instr_ptr->tokens[i];
-        }
-        execv(path, args);
-        printf("This won't be printed if execv is successul\n");
+        execv(path, instr_ptr->tokens);
+        printf("This won't be printed if execvp is successul\n");
     } else {
-        //printf("Forked");
-        process process1;
-        process1.cmd = malloc(sizeof(instr_ptr->tokens[0]));
-        memcpy(process1.cmd, instr_ptr->tokens[0], sizeof(instr_ptr->tokens[0]));
-        //process1.cmd = instr_ptr->tokens[0];
-        process1.pid = child_pid;
-        int index = insert(process1);
-        printf("[%d] [%d] \n", index, process1.pid);
-        waitpid(child_pid, &stat_loc, WNOHANG);
-        return;
+        waitpid(child_pid, &stat_loc, WUNTRACED);
     }
-
 }
