@@ -14,6 +14,7 @@
 #include <errno.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
+#include <fcntl.h>
 
 
 int numCommands = 0;
@@ -40,7 +41,7 @@ void printPrompt();
 void piping(instruction* instr_ptr);
 void ioRedirection(instruction* instr_ptr);
 void builtIns(instruction* instr_ptr);
-char* shortcutRes(instruction* instr_ptr);
+char* shortcutRes(char* instr_ptr);
 int fileExists(const char *path);
 
 int main() {
@@ -105,11 +106,11 @@ int main() {
         expandEnv(&instr);
 //        shortcutRes(&instr);
         ioRedirection(&instr);
-        execPath = pathResolution(&instr);
-        execute(execPath, &instr);
-        piping(&instr);
+//        execPath = pathResolution(&instr);
+//        execute(execPath, &instr);
+//        piping(&instr);
         builtIns(&instr);
-        printTokens(&instr);
+//        printTokens(&instr);
         clearInstruction(&instr);
     }
 
@@ -176,7 +177,7 @@ int fileExists(const char *path)
     return 1;
 }
 
-char* shortcutRes(instruction* instr_ptr)
+char* shortcutRes(char* instr_ptr)
 {
     char* envvar = (char*) malloc(1000);
     char* path_name = (char*) malloc(1000);
@@ -185,11 +186,11 @@ char* shortcutRes(instruction* instr_ptr)
     char *cwd = (char*) malloc(1000);
 
     // Copies input into path_name
-    strcpy(path_name, (instr_ptr->tokens)[0]);
+    strcpy(path_name, instr_ptr);
 //    printf("\nPATH NAME: '%s'\n", path_name);
 
 
-    if (instr_ptr->tokens[0][0] != '/') {
+    if (instr_ptr[0] != '/') {
         // If relative path:
         path = strtok(path_name, " /");
 //        printf("PATH: %s\n", path);
@@ -253,7 +254,7 @@ char* shortcutRes(instruction* instr_ptr)
         path = path_name;
 
         // Expands to root directory
-        if (instr_ptr->tokens[0][0] == '/') {
+        if (instr_ptr[0] == '/') {
             char *root = (char*)malloc(1000);
             chdir("/");
             cwd = getcwd(root, 100);
@@ -304,20 +305,118 @@ void ioRedirection(instruction* instr_ptr)
 {
     int numTok = instr_ptr->numTokens -1;
     int i;
+    int fd = 0;
+    char* path = (char*)malloc(1000);
+    char *path_name = (char*)malloc(1000);
+    char *io = (char*)malloc(1000);
+    char **new_arr = (char**)malloc(1000);
+
+//    strcpy(path_name, instr_ptr->tokens);
+
+//    instruction instr;
+//    instr.tokens = NULL;
+//    instr.numTokens = 0;
 
     for( i = 0; i < numTok; i++)
     {
-        if ( instr_ptr->tokens[i][0] == '>' || instr_ptr->tokens[i][0] == '<' )
-        {
+        if ((strcmp(instr_ptr->tokens[i],  ">") == 0)
+        || (strcmp(instr_ptr->tokens[i], "<") == 0)) {
+
             // Check if first or last character
-            if( i == 0 || i == numTok-1 )
-            {
+            if( i == 0 || i == numTok-1 ) {
                 printf("Missing name for redirect.\n");
             }
 
-            else
-            {
+            else {
+                if (strcmp(instr_ptr->tokens[i], "<") == 0) {
+                    fd = open(path, O_RDONLY);
+                    if(fork() == 0) {
+                        printf("Input redirection\n");
+                        path = pathResolution(instr_ptr);
+                        printf("PATH: %s\n", path);
 
+
+                        close(STDIN_FILENO);
+                        dup(fd);
+                        close(fd);
+
+
+                        // Execute input redir
+                        execute(path, instr_ptr);
+                    }
+
+                    else {
+                        //Parent
+                        close(fd);
+                    }
+                }
+
+                else if (strcmp(instr_ptr->tokens[i],">") == 0) {
+                    int index = i;
+
+                    strcpy(path, instr_ptr->tokens[i+1]);
+
+                    io = strtok(path_name, " >");
+
+
+                    for (int j = 0; j < index; j++)
+                    {
+                        strcpy(path_name, instr_ptr->tokens[j]);
+
+                        io = strtok(path_name, " >");
+
+                        while(io != NULL)
+                        {
+                            printf("IO: %s\n", io);
+                            new_arr[j] = io;
+                            io = strtok(NULL, " >");
+                        }
+                    }
+
+                    fd = open(path, O_WRONLY | O_TRUNC | O_CREAT, S_IRUSR |
+                    S_IRGRP | S_IWGRP | S_IWUSR);
+                    char *path_res = (char*)malloc(1000);
+
+                    if(fd == -1)
+                    {
+                        perror(path);
+                        exit(EXIT_FAILURE);
+                    }
+
+                    pid_t child_pid;
+                    int stat_loc;
+                    child_pid = fork();
+
+                    if (child_pid == 0) {
+                        printf("Output redirection\n");
+
+                        path = pathResolution(instr_ptr);
+
+                        printf("THIS: %s\n", instr_ptr->tokens[0]);
+
+                        close(STDOUT_FILENO);
+                        dup(fd);
+                        close(fd);
+
+                        path_res = pathResolution(instr_ptr);
+
+//                        execute(cmd, instr_ptr);
+//                        char *a[2];
+//                        a[0] = instr_ptr->tokens[0];
+
+
+                        execv(path_res, new_arr);
+
+                        printf("EXECUTING!\n");
+
+                    }
+
+                    else {
+                        waitpid(child_pid, &stat_loc, WUNTRACED);
+                        close(fd);
+                    }
+
+                }
             }
         }
     }
@@ -375,35 +474,45 @@ void builtIns(instruction* instr_ptr)
         //call chdir on the path and update pwd
         //copy path to pwd using setenv
         //also check that entered directory is valid
-        struct stat buf;
 
-        if (instr_ptr->tokens[1][0] != '/') { //path is relative
-            //printf("first char is %s", instr_ptr->tokens[1][0]);
-            char *temp = (char*)malloc(strlen(getenv("PWD")));
-            memcpy(temp, getenv("PWD"), strlen(getenv("PWD")));
-            strcat(temp, "/");
-            strcat(temp, instr_ptr->tokens[1]);
-            //printf("%s", temp);
-            if (stat(temp, &buf) == 0 && S_ISDIR(buf.st_mode)) {
-                printf("relative directory is %s \n", temp);
-                chdir(temp);
-                setenv("PWD", temp, 1);
-            } else {
-                printf("Directory doesn't exist\n");
-                return;
-            }
+        char *path = (char*)malloc(1000);
+        path = shortcutRes(instr_ptr->tokens[1]);
+        printf("PATH %s\n", path);
+        chdir(path);
+        setenv("PWD", path, 1);
+        return;
 
-        } else {
-            if (stat(instr_ptr->tokens[1], &buf) == 0 && S_ISDIR(buf.st_mode)) {
-                printf("directory is %s\n", instr_ptr->tokens[1]);
-                chdir(instr_ptr->tokens[1]);
-                setenv("PWD", instr_ptr->tokens[1], 1);
-            }
-            else {
-                printf("Directory doesn't exist \n");
-                return;
-            }
-        }
+
+
+//        struct stat buf;
+//
+//        if (instr_ptr->tokens[1][0] != '/') { //path is relative
+//            //printf("first char is %s", instr_ptr->tokens[1][0]);
+//            char *temp = (char*)malloc(strlen(getenv("PWD")));
+//            memcpy(temp, getenv("PWD"), strlen(getenv("PWD")));
+//            strcat(temp, "/");
+//            strcat(temp, instr_ptr->tokens[1]);
+//            //printf("%s", temp);
+//            if (stat(temp, &buf) == 0 && S_ISDIR(buf.st_mode)) {
+//                printf("relative directory is %s \n", temp);
+//                chdir(temp);
+//                setenv("PWD", temp, 1);
+//            } else {
+//                printf("Directory doesn't exist\n");
+//                return;
+//            }
+//
+//        } else {
+//            if (stat(instr_ptr->tokens[1], &buf) == 0 && S_ISDIR(buf.st_mode)) {
+//                printf("directory is %s\n", instr_ptr->tokens[1]);
+//                chdir(instr_ptr->tokens[1]);
+//                setenv("PWD", instr_ptr->tokens[1], 1);
+//            }
+//            else {
+//                printf("Directory doesn't exist \n");
+//                return;
+//            }
+//        }
 
 
         //printf("%s \n", (instr_ptr->tokens)[0]);
@@ -526,42 +635,44 @@ char* pathResolution(instruction* instr_ptr)
             if ( statReturn  == 0 )
             {
                 strcat(temp, instr_ptr->tokens[0]);
+//                printf("PATH RES: %s\n", temp);
                 return temp;
-                break;
             }
 
             pRes = strtok(NULL, ":");
             //free(temp);
             //printf("After strtok %s\n", pRes);
         }
-
-
     }
-    else
-    {
+    else {
         // Handle as Shortcut Resolution
-        char* path_res= shortcutRes(instr_ptr);
+        char* path_res= shortcutRes(instr_ptr->tokens[0]);
+//        printf("PATH RES: %s\n", path_res);
+
         return path_res;
+
     }
 
     // Invalid command or file
-    if ( statReturn == -1 )
-    {
+    if ( statReturn == -1 ) {
         printf("%s\n", "Failure command not found");
         return 0;
     }
 
 }
 
-void execute(char* path, instruction* instr_ptr){
+void execute(char* path, instruction* instr_ptr) {
     pid_t child_pid;
     int stat_loc;
     child_pid = fork();
+
     if (child_pid == 0) {
         /* Never returns if the call is successful */
         execv(path, instr_ptr->tokens);
         printf("This won't be printed if execvp is successul\n");
-    } else {
+    }
+    else {
         waitpid(child_pid, &stat_loc, WUNTRACED);
     }
 }
+
