@@ -1,8 +1,5 @@
-CXX = clang++
-CXXFLAGS = -pedantic -std=c++11
+shell: shell.c
+	gcc -o shell shell.c
 
-shell: parser.o
-	 $(CXX) $(CXXFLAGS) -o shell shell.o
-
-shell.o: parser.c
-	$(CXX) $(CXXFLAGS) -c parser.c
+clean:
+	rm -f *.o *.x core.*
