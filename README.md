@@ -17,6 +17,7 @@ github link: https://github.com/mm16bn/COP4610
 ### Known Bugs:
 -   runtime error: background execution is finicky in certain scenarios ex: & ls &
 - runtime error: piping does not properly execute the commands ex: ls | wc 
+- runtime error: running pathResolution and ioRedirection at same time in main causes segmentation faults. 
 
 ### Special Considerations: 
 n/a
