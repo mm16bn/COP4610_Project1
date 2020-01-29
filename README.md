@@ -5,9 +5,9 @@
 github link: https://github.com/mm16bn/COP4610
 
 ### Group Members:
-- Ellis, Ashley :  3, 5, 8 , 10
-- Ma, Melissa :  1, 4, 7, 10
-- McKenzie, Justin : 2, 6, 9, 10
+- Ellis, Ashley : 5, 8 , 10
+- Ma, Melissa : 4, 7, 10
+- McKenzie, Justin : 1, 2, 3, 6, 9, 10
 
 ### Problem Statement
 Design and implement a basic shell interface that supports input/output redirection, pipes, background processing, and a series of built in functions as specified below. The shell should be robust (e.g. it should not crash under any circumstances beyond machine failure). Unless otherwise specified, the required features should adhere to the operational semantics of the bash shell.
