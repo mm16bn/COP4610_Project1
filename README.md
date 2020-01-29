@@ -1,6 +1,8 @@
 # COP4610
 
-## Project 1: Implementing a Shell 
+## Project 1: Implementing a Shell
+
+github link: https://github.com/mm16bn/COP4610
 
 ### Group Members:
 - Ellis, Ashley :  3, 5, 8 , 10
@@ -23,11 +25,14 @@ specified), quotes, escaped characters, etc
 - The above decomposition of the project tasks is only a suggestion, you can implement the
 requirements in any order
 
-### Contents of Tar Archive: 
+Contents of Tar Archive:
+- makefile
+
 
 ### Makefile: 
 
-### Known Bugs: 
+Known Bugs:
+- background execution is finicky in certain scenarios ex: & ls &
 
 ### Special Considerations: 
 
