@@ -43,6 +43,7 @@ void clearInstruction(instruction* instr_ptr);
 void addNull(instruction* instr_ptr);
 void expandEnv(instruction* instr_ptr);
 char* pathResolution(instruction* instr_ptr);
+char* findExec(char *cmd);
 void execute(char* path, instruction* instr_ptr);
 void printPrompt();
 void piping(instruction* instr_ptr);
@@ -50,16 +51,16 @@ void ioRedirection(instruction* instr_ptr);
 void builtIns(instruction* instr_ptr);
 char* shortcutRes(char* instr_ptr);
 int fileExists(const char *path);
-int insert(process process1);
-void checkProcesses();
-void initializeProcess();
-void executeBg(instruction* instr_ptr, int i, char* path);
+//int insert(process process1);
+//void checkProcesses();
+//void initializeProcess();
+//void executeBg(instruction* instr_ptr, int i, char* path);
 
 process processes[100];
 
 
 int main() {
-    initializeProcess();
+//    initializeProcess();
 	char* token = NULL;
 	char* temp = NULL;
 	instruction instr;
@@ -118,15 +119,15 @@ int main() {
 		numCommands++;
 		addNull(&instr);
 		expandEnv(&instr);
-		ioRedirection(&instr);
-		execPath = pathResolution(&instr);
-		//printf("pre exec");
-		execute(execPath, &instr);
+//		ioRedirection(&instr);
         piping(&instr);
+//        execPath = pathResolution(&instr);
+//		printf("pre exec");
+//		execute(execPath, &instr);
         builtIns(&instr);
 		printTokens(&instr);
 		clearInstruction(&instr);
-		checkProcesses(processes);
+//		checkProcesses();
 	}
 
 	return 0;
@@ -380,7 +381,6 @@ void ioRedirection(instruction* instr_ptr)
                         path_res = pathResolution(instr_ptr);
 
                         execv(path_res, new_arr);
-
                     }
                     else {
                         waitpid(child_pid, &stat_loc, WUNTRACED);
@@ -504,7 +504,6 @@ void builtIns(instruction* instr_ptr)
 	    //also check that entered directory is valid
         char *path = (char*)malloc(1000);
         path = shortcutRes(instr_ptr->tokens[1]);
-        printf("PATH %s\n", path);
         chdir(path);
         setenv("PWD", path, 1);
         return;
@@ -516,10 +515,16 @@ void piping(instruction* instr_ptr) {
     int i;
     int stat_loc;
     char *path_res = (char *) malloc(1000);
-    char *path = (char *) malloc(1000);
     char *path_name = (char *) malloc(1000);
     char *io = (char *) malloc(1000);
     char **new_arr = (char **) malloc(1000);
+
+    char *path = (char*)malloc(1000);
+
+    char *path_res2 = (char *) malloc(1000);
+    char *path_name2 = (char *) malloc(1000);
+    char *io2 = (char *) malloc(1000);
+    char **new_arr2 = (char **) malloc(1000);
 
     for (i = 0; i < numTok; i++) {
         if (instr_ptr->tokens[i][0] == '|') {
@@ -527,18 +532,12 @@ void piping(instruction* instr_ptr) {
                 printf("Invalid null command.\n");
                 return;
             } else {
-                printf("Pipe!\n");
-
                 if (strcmp(instr_ptr->tokens[i], "|") == 0) {
                     int index = i;
 
-                    strcpy(path, instr_ptr->tokens[i + 1]);
-
-                    io = strtok(path_name, " |");
-
+                    // solve for cmd 1
                     for (int j = 0; j < index; j++) {
                         strcpy(path_name, instr_ptr->tokens[j]);
-
                         io = strtok(path_name, " |");
 
                         while (io != NULL) {
@@ -547,53 +546,60 @@ void piping(instruction* instr_ptr) {
                         }
                     }
 
+                    // solve for cmd 2
+                    int l = 0;
+                    for (int k = index + 1; k < numTok; k++) {
+                        strcpy(path_name2, instr_ptr->tokens[k]);
+                        io2 = strtok(path_name2, " |");
+
+                        while (io2 != NULL) {
+                            new_arr2[l] = io2;
+                            io2 = strtok(NULL, " |");
+                            l++;
+                        }
+                    }
+
+                    path_res2 = findExec(new_arr2[0]);
+
+                    pid_t child1_pid;
+                    pid_t child2_pid;
+
+                    child1_pid = fork();
                     int fd[2];
 
-                    if (fork() == 0) {
-                        // Child (cmd1|cmd2)
-                        pipe(fd);
-                        if (fork() == 0) {
-                            // Cmd1 (Writer)
-                            /**/
-                            path_res = pathResolution(instr_ptr);
+                    if (child1_pid < 0) {
+                        printf("\nCould not fork.");
+                        return;
+                    }
 
+                    if (child1_pid == 0) {
 
-                            /**/
-                            close(1);
-                            dup(fd[1]);
-                            close(fd[0]);
-                            close(fd[1]);
-                            //TODO:  Execute command
-
-                            execv(path_res, new_arr);
-
-                            exit(0);
-
-                        } else {
-
-                            //Cmd 2 (Reader)
-                            //Handle fds
-                            waitpid(fork(), &stat_loc, WUNTRACED);
-                            close(0);
-                            dup(fd[0]);
-                            close(fd[0]);
-                            close(fd[1]);
-                            //TODO: Execute command
-                            exit(0);
-                        }
-                    } else {
-                        //Parent (Shell)
+                        close(STDOUT_FILENO);
+                        dup(fd[1]);
                         close(fd[0]);
                         close(fd[1]);
+                        path_res = pathResolution(instr_ptr);
+]                        execv(path_res, new_arr);
                     }
-                    return;
-                }
 
+                    else {
+                        // cmd2 (reader)
+
+                        close(STDIN_FILENO);
+                        dup(fd[0]);
+                        close(fd[0]);
+                        close(fd[1]);
+                        execv(path_res2, new_arr2);
+                        wait(NULL);
+                        wait(NULL);
+                    }
+                }
             }
         }
-
     }
 }
+
+
 
 void printPrompt()
 {
@@ -607,6 +613,43 @@ void printPrompt()
 
     printf("%s@%s:%s> ", user, machine, pwd);
 
+}
+
+char* findExec(char *cmd)
+{
+    char* temp = (char*)malloc(1000);
+    char* pRes;
+    int statReturn;
+    struct stat stats;
+    char* path = (char*)malloc(1000);
+
+    memcpy(path, getenv("PATH"), strlen(getenv("PATH")));
+
+    pRes = strtok(path,":");
+    while( pRes != NULL ) {
+        strcpy(temp, pRes);
+        strcat(temp, "/");
+
+        char *temp2 = (char *) malloc(strlen(getenv("PATH")));
+
+        strcat(temp2, temp);
+
+        //printf("Before strcat token to temp2\n");
+        strcat(temp2, cmd);
+        //printf("After strcat token to temp2\n");
+
+        //printf("After strcat\n");
+        statReturn = stat(temp2, &stats);
+        //printf("temp2 = %s \n", temp2);
+
+        if (statReturn == 0) {
+            strcat(temp, cmd);
+//            printf("temp: %s\n", temp);
+            return temp;
+        }
+
+        pRes = strtok(NULL, ":");
+    }
 }
 
 char* pathResolution(instruction* instr_ptr)
@@ -683,7 +726,7 @@ void execute(char* path, instruction* instr_ptr) {
 
             if(strcmp(instr_ptr->tokens[i], "&") == 0){
                 //printf("going to bg");
-                executeBg(instr_ptr, i, path);
+//                executeBg(instr_ptr, i, path);
                 return;
             }
         }
@@ -704,7 +747,7 @@ int insert(process process1)
 {
     int i;
     for(i = 0; i < 100; i++){
-        if (processes[i].cmd == "*"){
+        if (strcmp(processes[i].cmd, "*") == 0){
             processes[i] = process1;
             return i;
         }
@@ -729,19 +772,20 @@ void checkProcesses()
 void initializeProcess(){
     int i;
     for (i = 0; i < 100; i++){
-        processes[i].cmd = "*";
+        strcpy(processes[i].cmd, "*");
     }
 }
 
 void executeBg(instruction* instr_ptr, int i, char* path) {
     pid_t child_pid;
     int stat_loc;
+    int size = sizeof(instr_ptr->tokens[0]);
     child_pid = fork();
-    //printf("%d", child_pid);
+//    printf("%d", child_pid);
     if (child_pid == 0) {
         /* Never returns if the call is successful */
         int j;
-        char **args = malloc(i + 1 * sizeof(char *));
+        char **args = (char**)malloc((i + 1) * sizeof(char *));
         for (j = 0; j < i; j++) {
             args[j] = instr_ptr->tokens[i];
         }
@@ -750,8 +794,8 @@ void executeBg(instruction* instr_ptr, int i, char* path) {
     } else {
         //printf("Forked");
         process process1;
-        process1.cmd = malloc(sizeof(instr_ptr->tokens[0]));
-        memcpy(process1.cmd, instr_ptr->tokens[0], sizeof(instr_ptr->tokens[0]));
+        process1.cmd = (char*)malloc(size);
+        memcpy(process1.cmd, instr_ptr->tokens[0], size);
         //process1.cmd = instr_ptr->tokens[0];
         process1.pid = child_pid;
         int index = insert(process1);
@@ -759,4 +803,5 @@ void executeBg(instruction* instr_ptr, int i, char* path) {
         waitpid(child_pid, &stat_loc, WNOHANG);
         return;
     }
+    return;
 }
