@@ -33,7 +33,7 @@ Contents of Tar Archive:
 
 Known Bugs:
 - background execution is finicky in certain scenarios ex: & ls &
-
+- piping does not properly execute the commands ex: ls | wc
 ### Special Considerations: 
 
 ### Extra Credit: 
