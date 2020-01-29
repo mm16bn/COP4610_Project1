@@ -211,12 +211,10 @@ char* shortcutRes(char* instr_ptr)
 
     // Copies input into path_name
     strcpy(path_name, instr_ptr);
-	// Copies input into path_name
 
     if (instr_ptr[0] != '/') {
         // If relative path:
         path = strtok(path_name, " /");
-//        printf("PATH: %s\n", path);
         while(path!=NULL) {
             if (strcmp(path, "~") == 0) {
                 strcpy(envvar, getenv("HOME"));
@@ -335,12 +333,6 @@ void ioRedirection(instruction* instr_ptr)
     char *io = (char*)malloc(1000);
     char **new_arr = (char**)malloc(1000);
 
-//    strcpy(path_name, instr_ptr->tokens);
-
-//    instruction instr;
-//    instr.tokens = NULL;
-//    instr.numTokens = 0;
-
     for( i = 0; i < numTok; i++)
     {
         if ((strcmp(instr_ptr->tokens[i],  ">") == 0)
@@ -358,6 +350,7 @@ void ioRedirection(instruction* instr_ptr)
                     strcpy(path, instr_ptr->tokens[i + 1]);
 
                     io = strtok(path_name, " <");
+
                     int j;
                     for (j = 0; j < index; j++) {
                         strcpy(path_name, instr_ptr->tokens[j]);
@@ -403,6 +396,7 @@ void ioRedirection(instruction* instr_ptr)
                     strcpy(path, instr_ptr->tokens[i+1]);
 
                     io = strtok(path_name, " >");
+
                     int j;
                     for (j = 0; j < index; j++)
                     {
