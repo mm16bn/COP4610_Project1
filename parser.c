@@ -29,6 +29,13 @@ typedef struct
     int pid;
 } process;
 
+typedef struct
+{
+    process *array;
+    size_t used;
+    size_t size;
+} Array;
+
 void addToken(instruction* instr_ptr, char* tok);
 void printTokens(instruction* instr_ptr);
 void clearInstruction(instruction* instr_ptr);
@@ -112,13 +119,14 @@ int main() {
 		addNull(&instr);
 		expandEnv(&instr);
 		shortcutRes(&instr);
-		ioRedirection(&instr);
+		//ioRedirection(&instr);
 		execPath = pathResolution(&instr);
 		//printf("pre exec");
 		execute(execPath, &instr);
-        piping(&instr);
+		printf("first bg process is: %s\n", processes[0].cmd);
+       // piping(&instr);
         builtIns(&instr);
-		printTokens(&instr);
+		//printTokens(&instr);
 		clearInstruction(&instr);
 		checkProcesses(processes);
 	}
@@ -334,7 +342,7 @@ void shortcutRes(instruction* instr_ptr)
         }
     }
 
-    return cwd;
+    return;
 }
 
 void expandEnv(instruction* instr_ptr)
@@ -368,7 +376,7 @@ void ioRedirection(instruction* instr_ptr)
 			{
 				printf("Missing name for redirect.\n");
 			}
-			
+
 			else
 			{
 
@@ -381,7 +389,7 @@ void builtIns(instruction* instr_ptr)
 {
 	int numTok = instr_ptr->numTokens -1;
 	int i;
-	
+
 	if( strcmp((instr_ptr->tokens)[0],"echo") == 0 )
 	{
 
@@ -392,23 +400,23 @@ void builtIns(instruction* instr_ptr)
 				if( instr_ptr->tokens[i][0] == '$' )
 				{
 					strcpy(envVar, getenv((instr_ptr->tokens)[i]));
-					
+
 					if( envVar != NULL )
 						printf("%s\n", envVar);
-					
+
 					else
 					{
-						printf("%s\n", "Invalid or NULL environment variable"); 	
+						printf("%s\n", "Invalid or NULL environment variable");
 						return;
 					}
 				}
-			
+
 				// Output without modification
 				else
 				{
 					printf("%s ", (instr_ptr->tokens)[i]);
 				}
-			} 
+			}
 			printf("%s", "\n");
 	}
 
@@ -419,7 +427,7 @@ void builtIns(instruction* instr_ptr)
 	}
 
 	else if ( strcmp((instr_ptr->tokens)[0], "jobs") == 0 )
-	{	
+	{
 		int i;
 		for (i = 0; i < 100; i++){
 		    if(strcmp(processes[i].cmd, "*") != 0){
@@ -477,7 +485,7 @@ void piping(instruction* instr_ptr)
 	int i;
 
 	for( i=0; i < numTok; i++)
-	{	
+	{
 		if ( instr_ptr->tokens[i][0] == '|' )
 		{
 			if ( i == 0 || i == numTok-1 )
@@ -489,9 +497,9 @@ void piping(instruction* instr_ptr)
 			else
 			{
 				printf("Pipe!\n");
-						
+
 				int fd[2];
-			
+
 				if (fork() == 0) {
 					// Child (cmd1|cmd2)
 					pipe(fd);
@@ -500,14 +508,14 @@ void piping(instruction* instr_ptr)
 						close(1);
 						dup(fd[1]);
 						close(fd[0]);
-						close(fd[1]);	 
+						close(fd[1]);
 					 //TODO:  Execute command
 					 exit(0);
-					 	
+
 					 }
 
 					else {
-					
+
 						//Cmd 2 (Reader)
 						//Handle fds
 						close(0);
@@ -518,7 +526,7 @@ void piping(instruction* instr_ptr)
 						exit(0);
 					}
 				}
-				
+
 				else{
 					//Parent (Shell)
 					close(fd[0]);
@@ -527,7 +535,7 @@ void piping(instruction* instr_ptr)
 				return;
 			}
 
-		}		
+		}
 	}
 
 }
@@ -553,12 +561,18 @@ char* pathResolution(instruction* instr_ptr)
 	int numTok = (instr_ptr->numTokens) -  1;
 	char *ptr, *pRes, *path, *isAbsolute, *temp = (char*) malloc(strlen(getenv("PATH")));
 	struct stat stats;
+    int tokIndex = 0;
 
-	path = (char*) malloc(strlen(getenv("PATH")));
+
+    path = (char*) malloc(strlen(getenv("PATH")));
 	memcpy(path, getenv("PATH"), strlen(getenv("PATH")));
-	
+
 	isAbsolute = strchr((instr_ptr->tokens)[0], '/');
-	
+
+	if(strcmp(instr_ptr->tokens[0], "&") == 0){
+	    tokIndex = 1;
+	}
+
 	if ( isAbsolute == NULL )
 	{
 		// Prefix with location in the path and search for file existence
@@ -566,17 +580,17 @@ char* pathResolution(instruction* instr_ptr)
 		// If none of the files exist, signal an error
 		pRes = strtok(path,":");
 //		printf("%s\n", pRes);
-		
+
 		while( pRes != NULL )
 		{
 			strcpy(temp, pRes);
 			strcat(temp, "/");
-			
+
 			char* temp2 = (char*) malloc(strlen(getenv("PATH")));
 			strcat(temp2, temp);
-			
+
 			//printf("Before strcat token to temp2\n");
-			strcat(temp2, instr_ptr->tokens[0]);
+			strcat(temp2, instr_ptr->tokens[tokIndex]);
 			//printf("After strcat token to temp2\n");
 
 			//printf("After strcat\n");
@@ -584,42 +598,128 @@ char* pathResolution(instruction* instr_ptr)
             //printf("temp2 = %s \n", temp2);
 			if ( statReturn  == 0 )
 			{
-				strcat(temp, instr_ptr->tokens[0]);
+				strcat(temp, instr_ptr->tokens[tokIndex]);
 				return temp;
 				break;
-			}		
+			}
 
 			pRes = strtok(NULL, ":");
 			//free(temp);
 			//printf("After strtok %s\n", pRes);
 		}
 
-	
+
 	}
 	else
 	{
 		// Handle as Shortcut Resolution
-	
+
 	}
 
 	// Invalid command or file
 	if ( statReturn == -1 )
 	{
-		printf("%s\n", "Failure command not found");
+		printf("Failure command '%s' not found\n", instr_ptr->tokens[tokIndex]);
 		return;
-	}	
-	
+	}
+
 }
 
 void execute(char* path, instruction* instr_ptr){
     pid_t child_pid;
     int stat_loc;
+    int i;
+    if(instr_ptr->numTokens > 2){
+        //printf("Numtokens = %d", instr_ptr->numTokens);
+        for(i = 1; i < instr_ptr->numTokens; i++){
+
+            if(strcmp(instr_ptr->tokens[i], "&") == 0){
+                printf("i = %d\n", i);
+                executeBg(instr_ptr, i, path);
+                //printf("We returnin\n");
+                return;
+            }
+        }
+    } else {
+        printf("No background");
+        child_pid = fork();
+        if (child_pid == 0) {
+            /* Never returns if the call is successful */
+            execv(path, instr_ptr->tokens);
+            printf("This won't be printed if execv is successul\n");
+        } else {
+            waitpid(child_pid, &stat_loc, WUNTRACED);
+        }
+    }
+    }
+
+
+
+int insert(process process1)
+{
+    int i;
+    for(i = 0; i < 100; i++){
+        if (processes[i].cmd == "*"){
+            processes[i] = process1;
+            return i;
+        }
+    }
+    printf("No room in queue");
+}
+
+void checkProcesses()
+{
+    printf("Checking...");
+    int i;
+    int stat_loc;
+    for(i = 0; i < 100; i++){
+        if (processes[i].pid == waitpid(-1, &stat_loc, WUNTRACED)){
+            printf("[%d]+ [%s]\n", i, processes[i].cmd);
+            int c;
+            for (c = i - 1; c < 100 - 1; c++)
+            processes[c] = processes[c+1];
+        }
+    }
+}
+
+void initializeProcess(){
+    int i;
+    for (i = 0; i < 100; i++){
+        processes[i].cmd = "*";
+    }
+}
+
+void executeBg(instruction* instr_ptr, int i, char* path){
+    pid_t child_pid;
+    int stat_loc;
+    //printf("Path is: %s", path);
     child_pid = fork();
+    //printf("%d", child_pid);
     if (child_pid == 0) {
         /* Never returns if the call is successful */
-        execv(path, instr_ptr->tokens);
-        printf("This won't be printed if execvp is successul\n");
+        int j;
+        char** args = malloc(i+1 * sizeof(char*));
+        for (j = 0; j < i; j++){
+            args[j] = instr_ptr->tokens[i];
+        }
+        execv(path, args);
+        // printf("This won't be printed if execv is successul\n");
     } else {
-        waitpid(child_pid, &stat_loc, WUNTRACED);
+        //printf("Forked");
+        process process1;
+        int tokIndex = 0;
+        if(strcmp(instr_ptr->tokens[0], "&") == 0){
+            tokIndex = 1;
+        }
+        process1.cmd = malloc(sizeof(instr_ptr->tokens[tokIndex]));
+        memcpy(process1.cmd, instr_ptr->tokens[tokIndex], sizeof(instr_ptr->tokens[tokIndex]));
+        //process1.cmd = instr_ptr->tokens[0];
+        process1.pid = child_pid;
+        int index = insert(process1);
+        printf("[%d] [%d] \n", index, process1.pid);
+        printf("cmd is: %s\n", process1.cmd);
+        waitpid(child_pid, &stat_loc, WNOHANG);
+        return;
     }
+
 }
